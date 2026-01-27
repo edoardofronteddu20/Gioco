@@ -48,9 +48,9 @@ class sprite(arcade.Window):
         
         # Flip orizzontale in base alla direzione
         if change_x < 0: 
-            self.sprite.scale = (-1, 1)
+            self.sprite.scale = (-0.2, 0.2)
         elif change_x > 0:
-            self.sprite.scale = (1, 1)
+            self.sprite.scale = (0.2, 0.2)
         
         # Limita movimento dentro lo schermo
         if self.sprite.center_x < 0:
