@@ -1,91 +1,122 @@
 import arcade
 import random
 
-class sprite(arcade.Window):
+
+class Gioco(arcade.Window):
     def __init__(self, larghezza, altezza, titolo):
         super().__init__(larghezza, altezza, titolo)
-        self.sprite = None
-        self.cookie = None
-        self.lista_sprite = arcade.SpriteList()
         
-        self.up_pressed = False
-        self.down_pressed = False
+        self.player_sprite = None
+        self.bg_sprite = None
+
+        self.player_list = arcade.SpriteList()
+        self.bg_list = arcade.SpriteList()
+        self.platform_list = arcade.SpriteList()
+        
+        # Movimento
         self.left_pressed = False
         self.right_pressed = False
+        self.space_pressed = False  # <-- aggiunto per salto continuo
         
+        # Velocità e gravità
+        self.change_x = 0
+        self.change_y = 0
         self.velocita = 4
+        self.gravity = -1
+        self.jump_strength = 10  # forza del salto continuo
         
         self.setup()
-    
+
     def setup(self):
-        self.sprite = arcade.Sprite("./assets/sprite.png")
-        self.sprite.center_x = 300
-        self.sprite.center_y = 100
-        self.sprite.scale = 0.2
-        self.lista_sprite.append(self.sprite)
-    
+        # Sfondo
+        self.bg_sprite = arcade.Sprite("./assets/background.png")
+        scale_x = self.width / self.bg_sprite.width
+        scale_y = self.height / self.bg_sprite.height
+        self.bg_sprite.scale = min(scale_x, scale_y)
+        self.bg_sprite.center_x = self.width / 2
+        self.bg_sprite.center_y = self.height / 2
+        self.bg_list.append(self.bg_sprite)
+        
+        # Player
+        self.player_sprite = arcade.Sprite("./assets/sprite.png", scale=0.2)
+        self.player_sprite.center_x = 300
+        self.player_sprite.center_y = 100
+        self.player_list.append(self.player_sprite)
+        
+        # Piattaforme manuali (trasparenti)
+        posizioni_piattaforme = [
+            # Da completare: (x, y, larghezza, altezza)
+        ]
+
+        for x, y, larg, alt in posizioni_piattaforme:
+            piattaforma = arcade.SpriteSolidColor(larg, alt, (0,0,0,0))  # trasparente
+            piattaforma.center_x = x
+            piattaforma.center_y = y
+            self.platform_list.append(piattaforma)
+
     def on_draw(self):
         self.clear()
-        self.lista_sprite.draw()
-    
+        self.bg_list.draw()
+        self.platform_list.draw()
+        self.player_list.draw()
+
     def on_update(self, delta_time):
-        # Calcola movimento in base ai tasti premuti
-        change_x = 0
-        change_y = 0
-        
-        if self.up_pressed:
-            change_y += self.velocita
-        if self.down_pressed:
-            change_y -= self.velocita
+        # Movimento orizzontale
+        self.change_x = 0
         if self.left_pressed:
-            change_x -= self.velocita
-        if self.right_pressed:
-            change_x += self.velocita
+            self.change_x = -self.velocita
+            self.player_sprite.scale = (-0.2, 0.2)
+        elif self.right_pressed:
+            self.change_x = self.velocita
+            self.player_sprite.scale = (0.2, 0.2)
         
-        # Applica movimento
-        self.sprite.center_x += change_x
-        self.sprite.center_y += change_y
+        self.player_sprite.center_x += self.change_x
         
-        # Flip orizzontale in base alla direzione
-        if change_x < 0: 
-            self.sprite.scale = (-0.2, 0.2)
-        elif change_x > 0:
-            self.sprite.scale = (0.2, 0.2)
+        # --- SALTO CONTINUO CON GRAVITÀ ---
+        if self.space_pressed:
+            self.change_y = self.jump_strength
+        else:
+            self.change_y += self.gravity
         
-        # Limita movimento dentro lo schermo
-        if self.sprite.center_x < 0:
-            self.sprite.center_x = 0
-        elif self.sprite.center_x > self.width:
-            self.sprite.center_x = self.width
+        self.player_sprite.center_y += self.change_y
+        # ----------------------------------
         
-        if self.sprite.center_y < 0:
-            self.sprite.center_y = 0
-        elif self.sprite.center_y > self.height:
-            self.sprite.center_y = self.height
-    
-    def on_key_press(self, tasto, modificatori):
-        if tasto in (arcade.key.UP, arcade.key.W):
-            self.up_pressed = True
-        elif tasto in (arcade.key.DOWN, arcade.key.S):
-            self.down_pressed = True
-        elif tasto in (arcade.key.LEFT, arcade.key.A):
+        # Collisioni con piattaforme
+        collisions = arcade.check_for_collision_with_list(self.player_sprite, self.platform_list)
+        if collisions:
+            self.player_sprite.bottom = max(platform.top for platform in collisions)
+            self.change_y = 0
+        
+        # Limiti dello schermo
+        if self.player_sprite.left < 0:
+            self.player_sprite.left = 0
+        if self.player_sprite.right > self.width:
+            self.player_sprite.right = self.width
+        if self.player_sprite.bottom < 0:
+            self.player_sprite.bottom = 0
+            self.change_y = 0
+        if self.player_sprite.top > self.height:
+            self.player_sprite.top = self.height
+            self.change_y = 0
+
+    def on_key_press(self, key, modifiers):
+        if key == arcade.key.A:
             self.left_pressed = True
-        elif tasto in (arcade.key.RIGHT, arcade.key.D):
+        elif key == arcade.key.D:
             self.right_pressed = True
-    
-    def on_key_release(self, tasto, modificatori):
-        """Gestisce il rilascio dei tasti"""
-        if tasto in (arcade.key.UP, arcade.key.W):
-            self.up_pressed = False
-        elif tasto in (arcade.key.DOWN, arcade.key.S):
-            self.down_pressed = False
-        elif tasto in (arcade.key.LEFT, arcade.key.A):
+        elif key == arcade.key.SPACE:
+            self.space_pressed = True  # <-- aggiunto
+
+    def on_key_release(self, key, modifiers):
+        if key == arcade.key.A:
             self.left_pressed = False
-        elif tasto in (arcade.key.RIGHT, arcade.key.D):
+        elif key == arcade.key.D:
             self.right_pressed = False
+        elif key == arcade.key.SPACE:
+            self.space_pressed = False  # <-- aggiunto
 
 def main():
-    gioco = sprite(600, 600, "Gioco")
+    gioco = Gioco(1600, 800, "Gioco Platformer")
     arcade.run()
 
 if __name__ == "__main__":
