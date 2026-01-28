@@ -45,7 +45,15 @@ class Gioco(arcade.Window):
         
         # Piattaforme manuali (trasparenti)
         posizioni_piattaforme = [
-            # Da completare: (x, y, larghezza, altezza)
+        (30, 205, 30, 15),
+        (45, 195, 30, 15),
+        (65, 185, 30, 15),
+        (260, 175, 360, 15),
+        (450, 165, 30, 15),
+        (460, 155, 30, 15),
+        (470, 145, 30, 15),
+        (480, 135, 30, 15),
+        (950, 125, 915, 15)
         ]
 
         for x, y, larg, alt in posizioni_piattaforme:
