@@ -16,7 +16,7 @@ class Gioco(arcade.Window):
         self.right_pressed = False
         
         self.velocita = 4
-        self.score = 0  # Punteggio
+        self.Punteggio = 0  # Punteggio
         
         arcade.set_background_color(arcade.color.WHITE)
         
@@ -40,7 +40,7 @@ class Gioco(arcade.Window):
         self.clear()  # Pulisce lo schermo
         self.lista_sprite.draw()  # Crea lo sprite principale
         self.lista_nemici.draw()  # Crea i nemici
-        arcade.draw_text(f"Punteggio: {self.score}", 10, self.height - 30, arcade.color.BLACK, 20)
+        arcade.draw_text(f"Punteggio: {self.Punteggio}", 10, self.height - 30, arcade.color.BLACK, 20)
 
     def on_update(self, delta_time):
         change_x = 0
@@ -85,7 +85,7 @@ class Gioco(arcade.Window):
         for nemico in self.lista_nemici:
             if arcade.check_for_collision(self.sprite, nemico):
                 nemico.distruggere()
-                self.score += 1  
+                self.Punteggio += 1  
                 self.spawn_nemico() 
 
     def on_key_press(self, tasto, modificatori):
