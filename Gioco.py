@@ -34,7 +34,7 @@ class Gioco(arcade.Window):
 
     def spawn_nemico(self):
         nemico = Nemico()  # Crea un nemico usando la classe importata
-        self.lista_nemici.append(nemico)  # Aggiungi il nemico alla lista
+        self.lista_nemici.append(nemico)  # Aggiunge il nemico alla lista
 
     def on_draw(self):
         self.clear()  # Pulisce lo schermo
