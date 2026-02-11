@@ -30,7 +30,7 @@ class Gioco(arcade.Window):
     def setup(self):
         self.sprite = arcade.Sprite(scale=0.2)
 
-        # 🔹 carichiamo le texture
+        # png degli sprite
         self.texture_idle = arcade.load_texture("./assets/sprite.png")
         self.texture_attack = arcade.load_texture("./assets/attack.png")
 
@@ -86,7 +86,7 @@ class Gioco(arcade.Window):
         for nemico in self.lista_nemici:
             nemico.update(self.sprite.center_x, self.sprite.center_y)
 
-        # ⏱️ gestione ritorno a idle
+        # ritorno sprite normale
         if self.attaccando:
             self.tempo_attacco += delta_time
             if self.tempo_attacco >= self.durata_attacco:
@@ -94,14 +94,14 @@ class Gioco(arcade.Window):
                 self.attaccando = False
                 self.tempo_attacco = 0.0
 
-    # 🖱️ CLICK SINISTRO = ATTACCO + CAMBIO PNG
+    # attacco
     def on_mouse_press(self, x, y, button, modifiers):
         if button == arcade.MOUSE_BUTTON_LEFT and not self.attaccando:
             # cambia sprite
             self.sprite.texture = self.texture_attack
             self.attaccando = True
 
-            # controllo nemici vicini
+            # controlla nemici vicini
             for nemico in self.lista_nemici:
                 distanza = math.dist(
                     (self.sprite.center_x, self.sprite.center_y),
