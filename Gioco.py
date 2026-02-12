@@ -1,10 +1,9 @@
 import arcade
 
-# Costanti
 GRAVITA = 0.5
 VELOCITA_SALTO = 11
 VELOCITA_NORMALE = 5
-VELOCITA_SPRINT = 9 # Velocità aumentata per lo scatto
+VELOCITA_SPRINT = 9 
 
 class Gioco(arcade.Window):
     def __init__(self, larghezza, altezza, titolo):
@@ -19,11 +18,10 @@ class Gioco(arcade.Window):
         self.physics_engine = None
         self.scala = 0.15
         
-        # Texture per lo scambio
+    
         self.texture_idle = None
         self.texture_run = None
 
-        # Variabili stato
         self.left_pressed = False
         self.right_pressed = False
         self.shift_pressed = False
@@ -32,7 +30,7 @@ class Gioco(arcade.Window):
         self.setup()
 
     def setup(self):
-        # SFONDO
+        # sfondo
         sfondo = arcade.Sprite("./assets/background.png")
         sfondo.center_x = self.width / 2
         sfondo.center_y = self.height / 2
@@ -40,11 +38,11 @@ class Gioco(arcade.Window):
         sfondo.height = self.height
         self.sfondo_list.append(sfondo)
 
-        # CARICAMENTO TEXTURE
+        # png
         self.texture_idle = arcade.load_texture("./assets/sprite.png")
         self.texture_run = arcade.load_texture("./assets/run.png")
 
-        # GIOCATORE - SPAWN IN ALTO A SINISTRA
+        # sprite
         self.sprite = arcade.Sprite()
         self.sprite.texture = self.texture_idle
         self.sprite.scale = self.scala
@@ -52,13 +50,13 @@ class Gioco(arcade.Window):
         self.sprite.center_y = 450 
         self.lista_sprite.append(self.sprite)
 
-        # 1. IL PAVIMENTO
+        # "pavimento"
         pavimento = arcade.SpriteSolidColor(1000, 40, arcade.color.TRANSPARENT_BLACK)
         pavimento.center_x = 500
         pavimento.center_y = 40 
         self.pavimento_list.append(pavimento)
 
-        # 2. PIATTAFORME SUPERIORI
+        # "pavimento 2"
         coords_piani = [
             [350, 190, 700, 20], # Secondo piano
             [170, 345, 340, 20], # Terzo Sinistra
@@ -87,7 +85,7 @@ class Gioco(arcade.Window):
         if self.physics_engine.can_jump():
             self.salti_effettuati = 0
 
-        # Gestione Velocità e Texture (Sprint)
+        # shift
         velocita_attuale = VELOCITA_NORMALE
         
         if self.shift_pressed and (self.left_pressed or self.right_pressed):
