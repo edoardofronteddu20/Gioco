@@ -1,115 +1,140 @@
 import arcade
-import random  
-import math
-from nemico import Nemico  # Importa la classe Nemico dal file nemico.py
+
+GRAVITA = 0.5
+VELOCITA_SALTO = 11
+VELOCITA_NORMALE = 5
+VELOCITA_SPRINT = 9 # Velocità dello shift
 
 class Gioco(arcade.Window):
     def __init__(self, larghezza, altezza, titolo):
         super().__init__(larghezza, altezza, titolo)
-        self.sprite = None
+
+        self.sfondo_lista = arcade.SpriteList()
         self.lista_sprite = arcade.SpriteList()
-        self.lista_nemici = arcade.SpriteList()  # Lista per i nemici
+        self.pavimento_lista = arcade.SpriteList()
+        self.piattaforme_superiori = arcade.SpriteList()
+
+
+        self.sprite = None
+        self.physics_engine = None
+        self.scala = 0.15
         
-        self.up_pressed = False
-        self.down_pressed = False
+        # png dello sprite
+        self.texture_idle = None
+        self.texture_run = None
+
+        # Tasti
         self.left_pressed = False
         self.right_pressed = False
-        
-        self.velocita = 4
-        self.score = 0  # Punteggio
-        
-        arcade.set_background_color(arcade.color.WHITE)
-        
-        self.setup()
-    
-    def setup(self):
-        self.sprite = arcade.Sprite("./assets/sprite.png")
-        self.sprite.center_x = 300
-        self.sprite.center_y = 100
-        self.sprite.scale = 0.2 
-        self.lista_sprite.append(self.sprite)
-        
-        # Spawna un nemico
-        self.spawn_nemico()
+        self.shift_pressed = False
+        self.salti_effettuati = 0
 
-    def spawn_nemico(self):
-        nemico = Nemico()  # Crea un nemico usando la classe importata
-        self.lista_nemici.append(nemico)  # Aggiungi il nemico alla lista
+        self.setup()
+
+    def setup(self):
+        # sfondo
+        sfondo = arcade.Sprite("./assets/background.png")
+        sfondo.center_x = self.width / 2
+        sfondo.center_y = self.height / 2
+        sfondo.width = self.width
+        sfondo.height = self.height
+        self.sfondo_lista.append(sfondo)
+
+        # le png
+        self.texture_idle = arcade.load_texture("./assets/sprite.png")
+        self.texture_run = arcade.load_texture("./assets/run.png")
+
+        # sprite
+        self.sprite = arcade.Sprite()
+        self.sprite.texture = self.texture_idle
+        self.sprite.scale = self.scala
+        self.sprite.center_x = 100 
+        self.sprite.center_y = 450 
+        self.lista_sprite.append(self.sprite)
+
+        # "pavimento" 
+        pavimento = arcade.SpriteSolidColor(1000, 40, arcade.color.TRANSPARENT_BLACK)
+        pavimento.center_x = 500
+        pavimento.center_y = 40 
+        self.pavimento_lista.append(pavimento)
+
+        # "pavimento 2" 
+        coords_piani = [
+            [350, 190, 700, 20], 
+            [170, 345, 340, 20], 
+            [830, 345, 340, 20], 
+        ]
+
+        for c in coords_piani:
+            p = arcade.SpriteSolidColor(int(c[2]), int(c[3]), arcade.color.TRANSPARENT_BLACK)
+            p.center_x = c[0]
+            p.center_y = c[1]
+            self.piattaforme_superiori.append(p)
+
+        self.physics_engine = arcade.PhysicsEnginePlatformer(
+            self.sprite,
+            platforms=self.piattaforme_superiori,
+            walls=self.pavimento_lista,
+            gravity_constant=GRAVITA
+        )
 
     def on_draw(self):
-        self.clear()  # Pulisce lo schermo
-        self.lista_sprite.draw()  # Crea lo sprite principale
-        self.lista_nemici.draw()  # Crea i nemici
-        arcade.draw_text(f"Punteggio: {self.score}", 10, self.height - 30, arcade.color.BLACK, 20)
+        self.clear()
+        self.sfondo_lista.draw()
+        self.lista_sprite.draw()
 
     def on_update(self, delta_time):
-        change_x = 0
-        change_y = 0
-        
-        if self.up_pressed:
-            change_y += self.velocita
-        if self.down_pressed:
-            change_y -= self.velocita
-        if self.left_pressed:
-            change_x -= self.velocita
-        if self.right_pressed:
-            change_x += self.velocita
-        
-        self.sprite.center_x += change_x
-        self.sprite.center_y += change_y
-        
-        if self.sprite.center_x < 0:
-            self.sprite.center_x = 0
-        elif self.sprite.center_x > self.width:
-            self.sprite.center_x = self.width
-        
-        if self.sprite.center_y < 0:
-            self.sprite.center_y = 0
-        elif self.sprite.center_y > self.height:
-            self.sprite.center_y = self.height
-        
-        # Flip orizzontale in base alla direzione del movimento
-        if change_x < 0:  # Se va a sinistra
-            self.sprite.scale = (-0.2, 0.2)  # Flip orizzontale
-        elif change_x > 0:  # Se va a destra
-            self.sprite.scale = (0.2, 0.2)  # Posizione normale
-        
-        # Aggiorna i nemici
-        for nemico in self.lista_nemici:
-            nemico.update(self.sprite.center_x, self.sprite.center_y)
+        if self.physics_engine.can_jump():
+            self.salti_effettuati = 0
 
-        # Controlla le collisioni con i nemici
-        self.check_collision()
-    
-    def check_collision(self):
-        for nemico in self.lista_nemici:
-            if arcade.check_for_collision(self.sprite, nemico):
-                nemico.distruggere()
-                self.score += 1  
-                self.spawn_nemico() 
+        # shift
+        velocita_attuale = VELOCITA_NORMALE
+        
+        if self.shift_pressed and (self.left_pressed or self.right_pressed):
+            velocita_attuale = VELOCITA_SPRINT
+            self.sprite.texture = self.texture_run
+        else:
+            self.sprite.texture = self.texture_idle
+
+        # Movimento
+        self.sprite.change_x = 0
+        if self.left_pressed and not self.right_pressed:
+            self.sprite.change_x = -velocita_attuale
+            self.sprite.scale = (-self.scala, self.scala)
+        elif self.right_pressed and not self.left_pressed:
+            self.sprite.change_x = velocita_attuale
+            self.sprite.scale = (self.scala, self.scala)
+
+        # Limiti bordi
+        if self.sprite.left < 0: self.sprite.left = 0
+        if self.sprite.right > self.width: self.sprite.right = self.width
+
+        self.physics_engine.update()
 
     def on_key_press(self, tasto, modificatori):
-        if tasto in (arcade.key.UP, arcade.key.W):
-            self.up_pressed = True
-        elif tasto in (arcade.key.DOWN, arcade.key.S):
-            self.down_pressed = True
-        elif tasto in (arcade.key.LEFT, arcade.key.A):
+        if tasto == arcade.key.W or tasto == arcade.key.SPACE:
+            if self.salti_effettuati < 2:
+                self.sprite.change_y = VELOCITA_SALTO
+                self.salti_effettuati += 1
+        elif tasto == arcade.key.S:
+            self.sprite.center_y -= 5
+        elif tasto == arcade.key.A:
             self.left_pressed = True
-        elif tasto in (arcade.key.RIGHT, arcade.key.D):
+        elif tasto == arcade.key.D:
             self.right_pressed = True
-    
+        elif tasto == arcade.key.LSHIFT or tasto == arcade.key.RSHIFT:
+            self.shift_pressed = True
+
     def on_key_release(self, tasto, modificatori):
-        if tasto in (arcade.key.UP, arcade.key.W):
-            self.up_pressed = False
-        elif tasto in (arcade.key.DOWN, arcade.key.S):
-            self.down_pressed = False
-        elif tasto in (arcade.key.LEFT, arcade.key.A):
+        if tasto == arcade.key.A:
             self.left_pressed = False
-        elif tasto in (arcade.key.RIGHT, arcade.key.D):
+        elif tasto == arcade.key.D:
             self.right_pressed = False
+        elif tasto == arcade.key.LSHIFT or tasto == arcade.key.RSHIFT:
+            self.shift_pressed = False
 
 def main():
-    gioco = Gioco(1000, 800, "Gioco con Nemici che Inseguono")
+    Gioco(1000, 600, "Gioco")
     arcade.run()
 
 if __name__ == "__main__":
