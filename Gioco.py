@@ -1,29 +1,29 @@
 import arcade
 
+# Costanti
 GRAVITA = 0.5
 VELOCITA_SALTO = 11
 VELOCITA_NORMALE = 5
-VELOCITA_SPRINT = 9 # Velocità dello shift
+VELOCITA_SPRINT = 9 # Velocità aumentata per lo scatto
 
 class Gioco(arcade.Window):
     def __init__(self, larghezza, altezza, titolo):
         super().__init__(larghezza, altezza, titolo)
 
-        self.sfondo_lista = arcade.SpriteList()
+        self.sfondo_list = arcade.SpriteList()
         self.lista_sprite = arcade.SpriteList()
-        self.pavimento_lista = arcade.SpriteList()
+        self.pavimento_list = arcade.SpriteList()
         self.piattaforme_superiori = arcade.SpriteList()
-
 
         self.sprite = None
         self.physics_engine = None
         self.scala = 0.15
         
-        # png dello sprite
+        # Texture per lo scambio
         self.texture_idle = None
         self.texture_run = None
 
-        # Tasti
+        # Variabili stato
         self.left_pressed = False
         self.right_pressed = False
         self.shift_pressed = False
@@ -32,19 +32,19 @@ class Gioco(arcade.Window):
         self.setup()
 
     def setup(self):
-        # sfondo
+        # SFONDO
         sfondo = arcade.Sprite("./assets/background.png")
         sfondo.center_x = self.width / 2
         sfondo.center_y = self.height / 2
         sfondo.width = self.width
         sfondo.height = self.height
-        self.sfondo_lista.append(sfondo)
+        self.sfondo_list.append(sfondo)
 
-        # le png
+        # CARICAMENTO TEXTURE
         self.texture_idle = arcade.load_texture("./assets/sprite.png")
         self.texture_run = arcade.load_texture("./assets/run.png")
 
-        # sprite
+        # GIOCATORE - SPAWN IN ALTO A SINISTRA
         self.sprite = arcade.Sprite()
         self.sprite.texture = self.texture_idle
         self.sprite.scale = self.scala
@@ -52,17 +52,17 @@ class Gioco(arcade.Window):
         self.sprite.center_y = 450 
         self.lista_sprite.append(self.sprite)
 
-        # "pavimento" 
+        # 1. IL PAVIMENTO
         pavimento = arcade.SpriteSolidColor(1000, 40, arcade.color.TRANSPARENT_BLACK)
         pavimento.center_x = 500
         pavimento.center_y = 40 
-        self.pavimento_lista.append(pavimento)
+        self.pavimento_list.append(pavimento)
 
-        # "pavimento 2" 
+        # 2. PIATTAFORME SUPERIORI
         coords_piani = [
-            [350, 190, 700, 20], 
-            [170, 345, 340, 20], 
-            [830, 345, 340, 20], 
+            [350, 190, 700, 20], # Secondo piano
+            [170, 345, 340, 20], # Terzo Sinistra
+            [830, 345, 340, 20], # Terzo Destra
         ]
 
         for c in coords_piani:
@@ -74,20 +74,20 @@ class Gioco(arcade.Window):
         self.physics_engine = arcade.PhysicsEnginePlatformer(
             self.sprite,
             platforms=self.piattaforme_superiori,
-            walls=self.pavimento_lista,
+            walls=self.pavimento_list,
             gravity_constant=GRAVITA
         )
 
     def on_draw(self):
         self.clear()
-        self.sfondo_lista.draw()
+        self.sfondo_list.draw()
         self.lista_sprite.draw()
 
     def on_update(self, delta_time):
         if self.physics_engine.can_jump():
             self.salti_effettuati = 0
 
-        # shift
+        # Gestione Velocità e Texture (Sprint)
         velocita_attuale = VELOCITA_NORMALE
         
         if self.shift_pressed and (self.left_pressed or self.right_pressed):
@@ -134,7 +134,7 @@ class Gioco(arcade.Window):
             self.shift_pressed = False
 
 def main():
-    Gioco(1000, 600, "Gioco")
+    Gioco(1000, 600, "Caverna - Sprint Mode")
     arcade.run()
 
 if __name__ == "__main__":
