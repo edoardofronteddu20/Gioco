@@ -132,7 +132,7 @@ class Gioco(arcade.Window):
             self.shift_pressed = False
 
 def main():
-    Gioco(1000, 600, "Caverna - Sprint Mode")
+    Gioco(1000, 600, "Gioco")
     arcade.run()
 
 if __name__ == "__main__":
