@@ -1,178 +1,164 @@
 import arcade
+import random
+import time
+import os
 
-# --- Costanti ---
-SCREEN_WIDTH = 1200
-SCREEN_HEIGHT = 650
-SCREEN_TITLE = "Gioco"
+# Costanti
+LARGHEZZA = 800
+ALTEZZA = 600
+TITOLO = "Ashen Blade - Gem Hunter di Edo"
+VELOCITA = 5
+TEMPO_MAX = 1
 
-WORLD_WIDTH = 5000  # larghezza mondo
-GRAVITA = 0.8
-PLAYER_JUMP_SPEED = 16
-PLAYER_MOVEMENT_SPEED = 7
-
-# Altezza del terreno (misura della strada nel background)
-ALTEZZA_TERRENO = 100  
-
-
-class Player(arcade.Sprite):
+class Gioco(arcade.Window):
     def __init__(self):
-        super().__init__(scale=1.5, hit_box_algorithm="Simple")
-
-        self.anim_idle = self._carica("assets/idle.png", 128, 128, 8, 8)
-        self.anim_walk = self._carica("assets/walk.png", 128, 128, 7, 7)
-        self.anim_jump = self._carica("assets/jump.png", 128, 128, 8, 8)
-
-        self.anim_idle_f = [t.flip_left_right() for t in self.anim_idle]
-        self.anim_walk_f = [t.flip_left_right() for t in self.anim_walk]
-        self.anim_jump_f = [t.flip_left_right() for t in self.anim_jump]
-
-        self.texture = self.anim_idle[0]
-
-        self.flippato = False
-        self.a_terra = False
-        self.cur_frame = 0
-        self.tempo_anim = 0.0
-        self.stato_attuale = "IDLE"
-
-    def _carica(self, percorso, fw, fh, num, col):
-        try:
-            sheet = arcade.load_spritesheet(percorso)
-            return sheet.get_texture_grid(size=(fw, fh), columns=col, count=num)
-        except:
-            return [arcade.Texture.create_empty("fall", (fw, fh))]
-
-    def update_animation(self, delta_time: float = 1/60):
-        if self.change_x < -0.1:
-            self.flippato = True
-        elif self.change_x > 0.1:
-            self.flippato = False
-
-        nuovo_stato = "IDLE"
-        if not self.a_terra:
-            nuovo_stato = "JUMP"
-        elif abs(self.change_x) > 0.1:
-            nuovo_stato = "WALK"
-
-        if nuovo_stato != self.stato_attuale:
-            self.stato_attuale = nuovo_stato
-            self.cur_frame = 0
-
-        if self.stato_attuale == "JUMP":
-            frames = self.anim_jump_f if self.flippato else self.anim_jump
-        elif self.stato_attuale == "WALK":
-            frames = self.anim_walk_f if self.flippato else self.anim_walk
-        else:
-            frames = self.anim_idle_f if self.flippato else self.anim_idle
-
-        self.tempo_anim += delta_time
-        if self.tempo_anim >= 0.1:
-            self.tempo_anim = 0
-            self.cur_frame = (self.cur_frame + 1) % len(frames)
-            self.texture = frames[self.cur_frame]
-
-
-class GameView(arcade.View):
-    def __init__(self):
-        super().__init__()
-        self.player_list = arcade.SpriteList()
-        self.sfondo_list = arcade.SpriteList()
-
-        self.camera_mondo = arcade.camera.Camera2D()
-        self.camera_ui = arcade.camera.Camera2D()
-
-        self.sinistra_premuto = False
-        self.destra_premuto = False
+        super().__init__(LARGHEZZA, ALTEZZA, TITOLO)
+        arcade.set_background_color(arcade.color.BLACK)
+        
         self.player = None
+        self.player_list = arcade.SpriteList()
+        self.gemme_lista = arcade.SpriteList()
+        
+        # tasti
+        self.up = self.down = self.left = self.right = False
+        
+        self.livello = 1
+        self.punti = 0
+        self.secondi = TEMPO_MAX
+        self.timer_spawn = 0
+        
+        self.pausa = False
+        self.finito = False
 
     def setup(self):
-        self.player_list = arcade.SpriteList()
-        self.sfondo_list = arcade.SpriteList()
-
-        try:
-            sfondo = arcade.Sprite("assets/background.png")
-            sfondo.width = SCREEN_WIDTH
-            sfondo.height = SCREEN_HEIGHT
-            sfondo.position = (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
-            self.sfondo_list.append(sfondo)
-        except:
-            pass
-
-        self.player = Player()
-
-        # 🔹 Spawn iniziale sulla strada (a sinistra)
-        self.player.left = 50  # distanza dal bordo sinistro
-        self.player.bottom = ALTEZZA_TERRENO  # allineato con la strada
-
+        if os.path.exists("assets/player.png"):
+            self.player = arcade.Sprite("assets/player.png", 1.2)
+        else:
+            self.player = arcade.SpriteCircle(15, arcade.color.BLUE)
+            
+        self.player.center_x = 400
+        self.player.center_y = 300
         self.player_list.append(self.player)
+
+    def spawna_gemma(self):
+        files = ["", "ama", "gri", "azu", "strip4", "roj"]
+        path = f"assets/spr_coin_{files[self.livello]}.png"
+        
+        if os.path.exists(path):
+            # Carico la texture grossa
+            base = arcade.load_texture(path)
+            w = base.width // 4
+            h = base.height
+            
+            gemma = arcade.Sprite(scale=2.5)
+            gemma.frames = [] 
+            
+            for i in range(4):
+                # Taglio il pezzettino
+                immagine_tagliata = base.image.crop((i*w, 0, (i+1)*w, h))
+                # Creo la texture dal pezzettino (corretto per le nuove versioni)
+                tex = arcade.Texture(image=immagine_tagliata, name=f"{path}_{i}")
+                gemma.frames.append(tex)
+            
+            gemma.texture = gemma.frames[0]
+            gemma.cur_frame = 0
+            gemma.anim_timer = 0
+            
+            gemma.center_x = random.randint(50, 750)
+            gemma.center_y = random.randint(50, 550)
+            self.gemme_lista.append(gemma)
 
     def on_draw(self):
         self.clear()
-
-        self.camera_ui.use()
-        self.sfondo_list.draw()
-
-        self.camera_mondo.use()
+        self.gemme_lista.draw()
         self.player_list.draw()
+        
+        arcade.draw_text(f"LIVELLO: {self.livello}", 10, 570, arcade.color.WHITE, 14)
+        arcade.draw_text(f"PUNTI: {self.punti}", 10, 550, arcade.color.GOLD, 14)
+        arcade.draw_text(f"TEMPO: {int(self.secondi)}", 10, 530, arcade.color.RED, 14)
+        
+        if self.pausa and not self.finito:
+            arcade.draw_lrbt_rectangle_filled(0, 800, 0, 600, (0, 0, 0, 150))
+            arcade.draw_text("PAUSA", 400, 300, arcade.color.WHITE, 50, anchor_x="center")
+            arcade.draw_text("Premi ESC per tornare al gioco", 400, 100, arcade.color.GRAY, 15, anchor_x="center")
+
+        if self.finito:
+            arcade.draw_lrbt_rectangle_filled(0, 800, 0, 600, (20, 20, 40, 240))
+            arcade.draw_text("Tempo finito", 400, 350, arcade.color.WHITE, 40, anchor_x="center")
+            arcade.draw_text(f"{self.punti} PT", 400, 280, arcade.color.GOLD, 50, anchor_x="center")
+            arcade.draw_text("Premi R per rifare", 400, 100, arcade.color.GRAY, 15, anchor_x="center")
 
     def on_update(self, delta_time):
-        self.player.change_x = 0
-        if self.sinistra_premuto:
-            self.player.change_x = -PLAYER_MOVEMENT_SPEED
-        if self.destra_premuto:
-            self.player.change_x = PLAYER_MOVEMENT_SPEED
-
-        # Fisica
-        self.player.change_y -= GRAVITA
-        self.player.center_x += self.player.change_x
-        self.player.center_y += self.player.change_y
-
-        # Terreno
-        if self.player.bottom <= ALTEZZA_TERRENO:
-            self.player.bottom = ALTEZZA_TERRENO
-            self.player.change_y = 0
-            self.player.a_terra = True
-        else:
-            self.player.a_terra = False
-
-        # Limiti orizzontali
-        if self.player.left < 0:
-            self.player.left = 0
-        if self.player.right > WORLD_WIDTH:
-            self.player.right = WORLD_WIDTH
-
-        # Camera segue il player, ma non blocca a sinistra
-        cam_x = self.player.center_x - SCREEN_WIDTH / 2
-        if cam_x < 0:
-            cam_x = 0
-        if cam_x > WORLD_WIDTH - SCREEN_WIDTH:
-            cam_x = WORLD_WIDTH - SCREEN_WIDTH
-
-        self.camera_mondo.position = (cam_x, 0)
-
-        self.player.update_animation(delta_time)
+        if self.pausa or self.finito:
+            return 
+            
+        # Animazione gemme
+        for g in self.gemme_lista:
+            g.anim_timer += delta_time
+            if g.anim_timer > 0.15:
+                g.anim_timer = 0
+                g.cur_frame = (g.cur_frame + 1) % 4
+                g.texture = g.frames[g.cur_frame]
+        
+        # Movimento
+        if self.up: self.player.center_y += VELOCITA
+        if self.down: self.player.center_y -= VELOCITA
+        if self.left: self.player.center_x -= VELOCITA
+        if self.right: self.player.center_x += VELOCITA
+        
+        self.player.left = max(0, self.player.left)
+        self.player.right = min(800, self.player.right)
+        self.player.bottom = max(0, self.player.bottom)
+        self.player.top = min(600, self.player.top)
+        
+        # Spawn
+        self.timer_spawn += delta_time
+        if self.timer_spawn > (2.0 - (self.livello * 0.2)):
+            self.spawna_gemma()
+            self.timer_spawn = 0
+            
+        # Collisioni
+        beccate = arcade.check_for_collision_with_list(self.player, self.gemme_lista)
+        for g in beccate:
+            g.remove_from_sprite_lists()
+            self.punti += (self.livello * 10)
+            
+        # Tempo
+        self.secondi -= delta_time
+        if self.secondi <= 0:
+            if self.livello < 5:
+                self.livello += 1
+                self.secondi = TEMPO_MAX
+                self.gemme_lista.clear()
+            else:
+                self.finito = True
 
     def on_key_press(self, key, modifiers):
-        if key in (arcade.key.LEFT, arcade.key.A):
-            self.sinistra_premuto = True
-        elif key in (arcade.key.RIGHT, arcade.key.D):
-            self.destra_premuto = True
-        elif key in (arcade.key.SPACE, arcade.key.W, arcade.key.UP) and self.player.a_terra:
-            self.player.change_y = PLAYER_JUMP_SPEED
+        if key == arcade.key.ESCAPE: self.pausa = not self.pausa
+        if key in [arcade.key.UP, arcade.key.W]: self.up = True
+        if key in [arcade.key.DOWN, arcade.key.S]: self.down = True
+        if key in [arcade.key.LEFT, arcade.key.A]: self.left = True
+        if key in [arcade.key.RIGHT, arcade.key.D]: self.right = True
+        
+        if key == arcade.key.R and self.finito:
+            self.livello = 1
+            self.punti = 0
+            self.secondi = TEMPO_MAX
+            self.finito = False
+            self.gemme_lista.clear()
+            self.player.center_x = 400
+            self.player.center_y = 300
 
     def on_key_release(self, key, modifiers):
-        if key in (arcade.key.LEFT, arcade.key.A):
-            self.sinistra_premuto = False
-        elif key in (arcade.key.RIGHT, arcade.key.D):
-            self.destra_premuto = False
-
+        if key in [arcade.key.UP, arcade.key.W]: self.up = False
+        if key in [arcade.key.DOWN, arcade.key.S]: self.down = False
+        if key in [arcade.key.LEFT, arcade.key.A]: self.left = False
+        if key in [arcade.key.RIGHT, arcade.key.D]: self.right = False
 
 def main():
-    window = arcade.Window(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
-    view = GameView()
-    view.setup()
-    window.show_view(view)
+    game = Gioco()
+    game.setup()
     arcade.run()
-
 
 if __name__ == "__main__":
     main()
